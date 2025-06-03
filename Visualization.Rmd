@@ -1,0 +1,149 @@
+<!-- chap 3 -->
+
+<!-- # Exploratory Visualization -->
+
+This section explores key patterns and distributions in the dataset through various visualizations. We begin with overall proportions and then examine booking cancellation behavior across hotel types and over time.
+
+## Proportion of Hotel Types
+
+This figure shows the proportion of bookings between the two hotel types.
+
+```{r fig1-hotel-type, fig.cap="Figure 1. Proportion of Resort Hotel and City Hotel"}
+hotel_prop <- df %>%
+  group_by(hotel) %>%
+  summarise(count = n()) %>%
+  mutate(percent = count / sum(count),
+         label = paste0(round(percent * 100, 3), "%"),
+         hotel = ifelse(hotel == 0, "Resort Hotel", "City Hotel"))
+
+ggplot(hotel_prop, aes(x = "", y = percent, fill = hotel)) +
+  geom_col(width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Proportion of Resort Hotel and City Hotel") +
+  theme_void() +
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5), size = 4)
+```
+
+---
+
+## Overall Booking Cancellation Proportions
+
+This figure visualizes the overall cancellation rate across all bookings.
+
+```{r fig2-cancel, fig.cap="Figure 2. Overall Cancellation and Non-Cancellation Proportions"}
+cancel_prop <- df %>%
+  mutate(status = ifelse(is_canceled == 1, "Canceled", "Not Canceled")) %>%
+  group_by(status) %>%
+  summarise(count = n()) %>%
+  mutate(percent = count / sum(count),
+         label = paste0(round(percent * 100, 3), "%"))
+
+ggplot(cancel_prop, aes(x = "", y = percent, fill = status)) +
+  geom_col(width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Overall Cancellation and Non-Cancellation Proportions") +
+  theme_void() +
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5), size = 4)
+```
+
+---
+
+## Resort Hotel: Cancellation vs. Non-Cancellation
+
+This figure shows the cancellation status distribution for Resort Hotel bookings only, using the `df_resort` subset.
+
+```{r fig3-resort, fig.cap="Figure 3. Reservation Cancellation Status in Resort Hotel"}
+resort_cancel <- df_resort %>%
+  mutate(status = ifelse(is_canceled == 1, "Canceled", "Not Canceled")) %>%
+  count(status) %>%
+  mutate(percent = n / sum(n),
+         label = paste0(round(percent * 100, 3), "%"))
+
+ggplot(resort_cancel, aes(x = "", y = percent, fill = status)) +
+  geom_col(width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Reservation Cancellation Status in Resort Hotel") +
+  theme_void() +
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5), size = 4)
+```
+
+---
+
+## City Hotel: Cancellation vs. Non-Cancellation
+
+This figure shows the cancellation status distribution for City Hotel bookings only, using the `df_city` subset.
+
+```{r fig4-city, fig.cap="Figure 4. Reservation Cancellation Status in City Hotel"}
+city_cancel <- df_city %>%
+  mutate(status = ifelse(is_canceled == 1, "Canceled", "Not Canceled")) %>%
+  count(status) %>%
+  mutate(percent = n / sum(n),
+         label = paste0(round(percent * 100, 3), "%"))
+
+ggplot(city_cancel, aes(x = "", y = percent, fill = status)) +
+  geom_col(width = 1) +
+  coord_polar(theta = "y") +
+  labs(title = "Reservation Cancellation Status in City Hotel") +
+  theme_void() +
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5), size = 4)
+```
+
+---
+
+## Reservation Counts per Year
+
+This chart shows how the number of hotel reservations varies by arrival year.
+
+```{r fig5-yearly, fig.cap="Figure 5. Number of Reservations per Year"}
+
+# Ensure that 'arrival_date' is in proper Date format
+# If the column was previously character type, specify the date format explicitly
+df$arrival_date <- as.Date(df$arrival_date, format = "%Y-%m-%d")
+
+# Extract the year component from the date
+df$year <- format(df$arrival_date, "%Y")
+
+# Group the dataset by year and count the number of reservations per year
+yearly_data <- df %>%
+  group_by(year) %>%
+  summarise(reservations = n())
+
+# Create a bar plot showing the number of reservations per year
+ggplot(yearly_data, aes(x = factor(year), y = reservations, fill = factor(year))) + 
+  geom_col() +
+  labs(title = "Number of Reservations per Year",
+       x = "Arrival Year",
+       y = "Number of Reservations") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+---
+
+## Monthly Average Guest Count per Hotel
+
+This plot compares the average number of guests per month between the two hotel types.
+
+```{r fig6-monthly, fig.cap="Figure 6. Average Number of Hotel Guests per Month"}
+
+# Extract numeric month from arrival_date (as integer 1~12)
+df$month_num <- as.integer(format(df$arrival_date, "%m"))
+
+# Compute total guests and monthly average per hotel type
+monthly_guests <- df %>%
+  mutate(total_guests = adults + children + babies) %>%
+  group_by(month_num, hotel) %>%
+  summarise(avg_guests = mean(total_guests, na.rm = TRUE), .groups = "drop") %>%
+  ungroup() %>%
+  mutate(hotel = ifelse(hotel == 0, "Resort Hotel", "City Hotel"))
+
+# Plot the monthly average guest count by hotel type (X axis as numeric month)
+ggplot(monthly_guests, aes(x = month_num, y = avg_guests, color = hotel, group = hotel)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "Average Number of Hotel Guests per Month",
+       x = "Month (Numeric)",
+       y = "Number of Guests") +
+  scale_x_continuous(breaks = 1:12) +
+  theme_minimal()
+```

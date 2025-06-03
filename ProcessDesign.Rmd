@@ -1,0 +1,88 @@
+<!-- chap 4 -->
+
+<!-- # Analysis Process Designed for the Problem -->
+
+```{r setup_processing, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+suppressPackageStartupMessages(library(htmlwidgets))
+```
+
+## Selected Data Mining Methods and Rationale
+
+In this study, we utilize **XGBoost** and **CatBoost** as the primary data mining methods.
+
+**XGBoost** is a gradient boosting algorithm based on decision trees. It enhances performance by sequentially adding new trees to correct the residuals of previous ones, gradually improving the overall model. For prediction, input data is passed through all trees, each contributing a score based on the leaf node it lands in. The final prediction is the sum of these scores. XGBoost also supports automatic handling of missing values, parallel computation, and includes regularization to mitigate overfitting.
+
+**CatBoost**, on the other hand, is specifically optimized for categorical features. Unlike conventional gradient boosting methods, CatBoost builds **symmetric trees** with uniform splitting structures. A major advantage lies in its internal **target encoding** mechanism, which estimates the likelihood of the target variable based on category membership. This reduces the need for manual encoding. Furthermore, **combinatorial categorical encoding** is used to improve generalization, making CatBoost particularly effective for datasets rich in categorical variables.
+
+We selected these models for their proven **accuracy, efficiency, and robustness** in handling complex feature structures, including temporal and seasonal patterns common in tourism datasets.
+
+---
+
+## Model Evaluation Method
+
+Two data partitioning strategies were employed to ensure reliable model evaluation.
+
+- The **first strategy** designates data from late 2015 to the end of 2016 as the **training set**, with 25% of that portion allocated as a **validation set**, segmented using **monthly time blocks**. Data from **January to June 2017** forms the **test set**.
+- The **second strategy** performs a random split, allocating **75%** of the data for training and **25%** for testing, followed by a **5-fold cross-validation** to assess model generalizability.
+
+Given the temporal nature of hotel bookings, we structured data using **month/year blocks** to better capture seasonal trends and forecast future behavior.
+
+To evaluate model performance comprehensively, we employed **accuracy**, **recall**, and **precision**. The **ROC curve** was also used to compare classifiers under different thresholds, and **confusion matrices** were analyzed to identify potential biases or misclassification patterns. This multi-metric approach ensures our models are not only accurate but also practically useful in reducing real-world booking cancellation risks.
+
+---
+
+## Platforms and Tools Used
+
+- **Operating System**: Windows 10, 11  
+- **Development Environment**: RStudio  
+- **Programming Language**: R  
+
+**Main Libraries**:
+- `ggplot2` – Data visualization  
+- `caret` – Model training and evaluation  
+- `dplyr`, `data.table` – Data manipulation  
+- `xgboost`, `catboost` – Machine learning modeling  
+- Additional packages: `readr`, `lubridate`, `pROC`, etc.
+
+These tools offered a reliable and efficient environment for processing, training, and visualizing the hotel booking dataset.
+
+---
+
+## Research Workflow and Explanation
+
+- **Data Preprocessing**:  
+  Columns causing data leakage (e.g., `reservation_status`, `reservation_status_date`) were removed. Columns with limited analytical value or excessive missing data (e.g., `company`, `country`, `agent`) were also dropped. Missing values in numerical features were imputed with the **median**, while categorical features were filled using either the **most frequent value** or a placeholder such as `"Unknown"`. Date fields were properly formatted, and extreme values were handled via clipping or transformation.
+
+- **Feature Selection & Visualization**:  
+  Important features were selected using **Information Gain** and **SHAP (SHapley Additive exPlanations)**, retaining **15 top variables**. Visualizations were used to explore distributions and correlations, aiding interpretability.
+
+- **Model Training & Evaluation**:  
+  We trained both XGBoost and CatBoost, and visualized decision trees to understand the model's logic. Evaluation used both standard metrics and visual diagnostic tools.
+
+- **Conclusion**:  
+  The final analysis compares model performance against the study’s objectives and offers suggestions for future research improvements.
+
+---
+
+## Workflow Diagram
+
+```{r workflow-diagram, echo=FALSE}
+library(DiagrammeR)
+
+grViz("
+digraph workflow {
+  graph [layout = dot, rankdir = LR]
+
+  node [shape = polygon, sides = 6, peripheries = 1, style = filled, fontname = Helvetica, fontsize = 12]
+  
+  A [label = 'Data Preprocessing', fillcolor = lightblue]
+  B [label = 'Feature Selection\\n& Data Visualization', fillcolor = lemonchiffon]
+  C [label = 'Modelling\\n& Evaluation', fillcolor = lightpink]
+  D [label = 'Conclusion', fillcolor = palegreen]
+
+  A -> B -> C -> D
+}
+")
+```
+

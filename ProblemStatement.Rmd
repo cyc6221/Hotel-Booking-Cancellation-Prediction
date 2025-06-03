@@ -1,0 +1,67 @@
+<!-- chap 1 -->
+
+<!--# Problem Statement-->
+
+## Objective Description
+
+This study aims to predict whether a hotel booking will be canceled based on customer reservation information. The dataset includes various booking-related attributes such as check-in date, number of guests, length of stay, and more. The overall research pipeline consists of data preprocessing, feature selection, dataset splitting, model construction, and model evaluation. The final output is a binary prediction indicating whether the booking will be canceled.
+
+## Evaluation Metrics
+
+We define the **positive class** as canceled bookings and the **negative class** as non-canceled bookings. Based on this definition, the confusion matrix shown in **Table \@ref(tab:conf-matrix)** summarizes the relationship between actual and predicted labels. The following metrics are used for model evaluation:
+
+- **Accuracy**: Overall correctness of predictions  
+  \[
+  \text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}
+  \]
+
+- **Precision**: Correctness among all predicted cancellations  
+  \[
+  \text{Precision} = \frac{TP}{TP + FP}
+  \]
+
+- **Recall (Sensitivity)**: Proportion of actual cancellations that were correctly identified  
+  \[
+  \text{Recall} = \frac{TP}{TP + FN}
+  \]
+
+- **AUC (Area Under the ROC Curve)**: Area under the receiver operating characteristic curve
+
+```{r conf-matrix, echo=FALSE, results='asis'}
+conf_matrix <- data.frame(
+  "Actual Class" = c("Is Canceled", "Not Canceled"),
+  "Predicted: Is Canceled" = c("TP", "FP"),
+  "Predicted: Not Canceled" = c("FN", "TN")
+)
+
+knitr::kable(
+  conf_matrix,
+  caption = "Confusion Matrix for the Prediction Task",
+  align = "c"
+)
+```
+
+## Baseline Model Performance and Target Metrics
+
+**Table @ref(tab\:baseline-performance)** presents baseline performance results from a prior study \[@antonio2017cancellation], including both resort (H1) and city hotels (H2), evaluated on training and testing datasets. Based on this reference, we define our target metrics as follows:
+
+* **Accuracy**: ≥ 0.85
+* **Precision**: ≥ 0.85
+* **Recall (Sensitivity)**: ≥ 0.80
+* **AUC**: ≥ 0.90
+
+```{r baseline-performance, echo=FALSE, message=FALSE}
+knitr::kable(
+  data.frame(
+    Hotel = rep(c("H1", "H2"), each = 2),
+    Dataset = rep(c("Train", "Test"), 2),
+    Accuracy = c(0.846, 0.842, 0.857, 0.849),
+    AUC = c(0.910, 0.877, 0.934, 0.922),
+    Precision = c(0.839, 0.811, 0.876, 0.869),
+    Sensitivity = c(0.626, 0.603, 0.793, 0.779)
+  ),
+  caption = "Model Performance from Reference Study",
+  col.names = c("Hotel", "Dataset", "Acc.", "AUC", "Prec.", "Sensit."),
+  align = "c"
+)
+```

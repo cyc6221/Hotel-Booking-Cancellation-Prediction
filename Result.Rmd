@@ -1,0 +1,46 @@
+<!-- chap 5 -->
+
+<!-- # 5. Analysis Results -->
+
+
+```{r message=FALSE, echo=FALSE}
+library(knitr)
+```
+
+<!-- 5.1 prior -->
+
+## Introduction to Experiments and Prior Knowledge
+
+In this experiment, the selected dataset includes records from two different hotel types: **Resort Hotel** and **City Hotel**. As a result, we split the dataset by hotel type and train models separately for each. Furthermore, the dataset suffers from class imbalance, particularly between the `canceled` and `not canceled` booking classes. To address this issue, we apply **SMOTE** (Synthetic Minority Over-sampling Technique) and **DownSampling** methods after splitting the dataset.
+
+The sampling ratios used for SMOTE and DownSampling are summarized in **Table \@ref(tab:smote-sample)**:
+
+```{r smote-sample, echo=FALSE}
+sampling_table <- data.frame(
+  Method = c("SMOTE", "SMOTE", "DownSample", "DownSample"),
+  Hotel = c("Resort Hotel", "City Hotel", "Resort Hotel", "City Hotel"),
+  `Cancel : Not Canceled` = c("1 : 0.6", "1 : 0.8", "1.5 : 1", "1.2 : 1")
+)
+
+kable(sampling_table,
+      caption = "Sampling Ratios for SMOTE and DownSampling")
+```
+
+We adopted two strategies for splitting the dataset:
+
+### Method 1: Time-Based Splitting
+
+We considered temporal factors and selected data from 2015 to 2016 as the training set. The test set consists of data from January to June 2017. Following \[1], we further split 25% of each month's data within the training set as a validation set, leaving 75% for model training.
+
+Although \[1] proposes fine-tuning the model daily using test set data, which can yield high performance, we believe this approach lacks consideration of time continuity. Nevertheless, it may serve as an upper bound (performance ceiling) for classification performance.
+
+### Method 2: Random Splitting
+
+We randomly sampled the entire dataset and split it into 75% for training and 25% for testing. To prevent overfitting, we performed **internal validation** within the training set using **5-Fold Stratified Cross Validation**. The final trained model was then evaluated on the test set.
+
+To reduce learning costs and avoid capturing less relevant features in high-dimensional data, we also applied **feature selection**. The methods used include **Information Gain** and **SHAP values**, in conjunction with classical machine learning models for comparison.
+
+In terms of classifiers, we selected **XGBoost** and **CatBoost**, which are boosting-based models that integrate multiple weak classifiers to improve performance.
+
+In the following sections, we will compare model performance across different dataset splits, classifiers, and feature selection strategies using various evaluation metrics, followed by an in-depth analysis.
+

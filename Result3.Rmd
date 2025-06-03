@@ -1,0 +1,173 @@
+<!-- chap 5 -->
+
+<!-- # 5. Analysis Results -->
+
+
+```{r message=FALSE, echo=FALSE}
+library(dplyr)
+library(tidyr)
+library(knitr)
+```
+
+<!-- 5.3 CatBoost -->
+
+## Using Method I with CatBoost Classifier
+
+
+<!-- ```{r child="Result_Resort_CAT_m1.Rmd"} -->
+<!-- ``` -->
+
+<!-- ```{r child="Result_City_CAT_m1.Rmd"} -->
+<!-- ``` -->
+
+
+### Combined Results Summary
+
+```{r message=FALSE, echo=FALSE}
+resort_results <- read.csv("result_resort_CAT_m1.csv")
+city_results <- read.csv("result_city_CAT_m1.csv")
+
+all_results <- bind_rows(resort_results, city_results)
+
+kable(all_results, 
+      caption = "Complete Performance Comparison: CAToost with Method I",
+      digits = 4)
+
+gap_analysis <- all_results %>%
+  select(Hotel, Method, Dataset, Accuracy, AUC) %>%
+  pivot_wider(names_from = Dataset, values_from = c(Accuracy, AUC)) %>%
+  mutate(
+    Accuracy_Gap = round((Accuracy_Validation - Accuracy_Test) * 100, 2),
+    AUC_Gap = round((AUC_Validation - AUC_Test) * 100, 2)
+  ) %>%
+  select(Hotel, Method, Accuracy_Gap, AUC_Gap)
+
+kable(gap_analysis,
+      caption = "Performance Gap Analysis: Validation vs Test (Percentage Points)",
+      col.names = c("Hotel", "Method", "Accuracy Gap (%)", "AUC Gap (%)"))
+
+```
+
+
+### Validation vs. Test Performance Gap
+
+---
+
+## Using Method I with CAToost Classifier with SHAP 
+
+<!-- ```{r child="Result_Resort_CAT_m1_SHAP.Rmd"} -->
+<!-- ``` -->
+
+<!-- ```{r child="Result_City_CAT_m1_SHAP.Rmd"} -->
+<!-- ``` -->
+
+### Combined Results Summary
+
+```{r message=FALSE, echo=FALSE}
+resort_results <- read.csv("result_resort_CAT_m1_SHAP.csv")
+city_results <- read.csv("result_city_CAT_m1_SHAP.csv")
+
+all_results <- bind_rows(resort_results, city_results)
+
+kable(all_results, 
+      caption = "Complete Performance Comparison: CAToost with Method I with SHAP",
+      digits = 4)
+
+gap_analysis <- all_results %>%
+  select(Hotel, Method, Dataset, Accuracy, AUC) %>%
+  pivot_wider(names_from = Dataset, values_from = c(Accuracy, AUC)) %>%
+  mutate(
+    Accuracy_Gap = round((Accuracy_Validation - Accuracy_Test) * 100, 2),
+    AUC_Gap = round((AUC_Validation - AUC_Test) * 100, 2)
+  ) %>%
+  select(Hotel, Method, Accuracy_Gap, AUC_Gap)
+
+kable(gap_analysis,
+      caption = "Performance Gap Analysis: Validation vs Test (Percentage Points)",
+      col.names = c("Hotel", "Method", "Accuracy Gap (%)", "AUC Gap (%)"))
+
+```
+
+### Validation vs. Test Performance Gap
+
+---
+
+## Using Method II with CAToost Classifier
+
+<!-- ```{r child="Result_Resort_CAT_m2.Rmd"} -->
+<!-- ``` -->
+
+<!-- ```{r child="Result_City_CAT_m2.Rmd"} -->
+<!-- ``` -->
+
+
+### Combined Results Summary
+
+```{r message=FALSE, echo=FALSE}
+resort_results <- read.csv("result_resort_CAT_m2.csv")
+city_results <- read.csv("result_city_CAT_m2.csv")
+
+all_results <- bind_rows(resort_results, city_results)
+
+kable(all_results, 
+      caption = "Complete Performance Comparison: CAToost with Method II",
+      digits = 4)
+
+gap_analysis <- all_results %>%
+  select(Hotel, Method, Dataset, Accuracy, AUC) %>%
+  pivot_wider(names_from = Dataset, values_from = c(Accuracy, AUC)) %>%
+  mutate(
+    Accuracy_Gap = round((Accuracy_Validation - Accuracy_Test) * 100, 2),
+    AUC_Gap = round((AUC_Validation - AUC_Test) * 100, 2)
+  ) %>%
+  select(Hotel, Method, Accuracy_Gap, AUC_Gap)
+
+kable(gap_analysis,
+      caption = "Performance Gap Analysis: Validation vs Test (Percentage Points)",
+      col.names = c("Hotel", "Method", "Accuracy Gap (%)", "AUC Gap (%)"))
+
+```
+
+
+### Validation vs. Test Performance Gap
+
+---
+
+## Using Method II with CAToost Classifier with SHAP
+
+<!-- ```{r child="Result_Resort_CAT_m2_SHAP.Rmd"} -->
+<!-- ``` -->
+
+<!-- ```{r child="Result_City_CAT_m2_SHAP.Rmd"} -->
+<!-- ``` -->
+
+
+### Combined Results Summary
+
+```{r message=FALSE, echo=FALSE}
+resort_results <- read.csv("result_resort_CAT_m2_SHAP.csv")
+city_results <- read.csv("result_city_CAT_m2_SHAP.csv")
+
+all_results <- bind_rows(resort_results, city_results)
+
+kable(all_results, 
+      caption = "Complete Performance Comparison: CAToost with Method II with SHAP",
+      digits = 4)
+
+gap_analysis <- all_results %>%
+  select(Hotel, Method, Dataset, Accuracy, AUC) %>%
+  pivot_wider(names_from = Dataset, values_from = c(Accuracy, AUC)) %>%
+  mutate(
+    Accuracy_Gap = round((Accuracy_Validation - Accuracy_Test) * 100, 2),
+    AUC_Gap = round((AUC_Validation - AUC_Test) * 100, 2)
+  ) %>%
+  select(Hotel, Method, Accuracy_Gap, AUC_Gap)
+
+kable(gap_analysis,
+      caption = "Performance Gap Analysis: Validation vs Test (Percentage Points)",
+      col.names = c("Hotel", "Method", "Accuracy Gap (%)", "AUC Gap (%)"))
+
+```
+
+
+### Validation vs. Test Performance Gap

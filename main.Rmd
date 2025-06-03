@@ -1,0 +1,63 @@
+---
+title: "Applied Methods in Statistics Final Project"
+subtitle: "Hotel Booking Cancellation Prediction"
+author: "Ching-Yeh Chen (ID: 313554049)"
+date: "2025-06-04"
+output:
+  bookdown::html_document2:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    css: style.css
+bibliography: references.bib
+csl: ieee.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(knitr)
+```
+
+<!-- chap 1 -->
+
+<!-- # Problem Statement -->
+
+<!-- ```{r child="ProblemStatement.Rmd"} -->
+<!-- ``` -->
+
+<!-- chap 2 -->
+
+<!-- # Dataset Description, Data Preprocessing, and Visualization -->
+
+<!-- ```{r child="Dataset.Rmd"} -->
+<!-- ``` -->
+
+<!-- chap 3 -->
+
+<!-- # Exploratory Visualization -->
+
+<!-- ```{r child="Visualization.Rmd"} -->
+<!-- ``` -->
+
+<!-- chap 4 -->
+
+<!-- # Analysis Process Designed for the Problem -->
+
+<!-- ```{r child="ProcessDesign.Rmd"} -->
+<!-- ``` -->
+
+<!-- chap 5 -->
+
+# Analysis Results
+
+```{r child="Result.Rmd"}
+```
+
+```{r child="Result2.Rmd"}
+```
+
+```{r child="Result3.Rmd"}
+```

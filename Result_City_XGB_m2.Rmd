@@ -1,0 +1,463 @@
+```{r setup_city_xgboost_m2, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(xgboost)
+library(caret)
+library(dplyr)
+library(pROC)
+library(ROCR)
+library(themis)
+library(recipes)
+library(MLmetrics)
+library(knitr)
+library(lubridate)
+library(tidyr) # Added tidyr for pivot_wider
+
+# df_resort <- read.csv("resort_hotel.csv")
+df_city <- read.csv("city_hotel.csv")
+
+set.seed(42)
+```
+
+```{r helper-functions, echo=FALSE}
+# Define helper functions
+
+evaluate_caret_model <- function(model, data_df, top_features, label_col = "is_canceled", threshold = 0.65) {
+  # Ensure data_df has the label_col and it's a factor with expected levels if model expects factor
+  # For caret models trained with twoClassSummary, the predict(type="prob") will give probs for the second factor level
+  # Here, we assume "canceled" is the positive class and second level.
+  
+  # Select only top_features for prediction
+  predict_data <- data_df[, top_features, drop = FALSE]
+
+  # Handle cases where some top_features might be missing in data_df (e.g., due to earlier processing)
+  # This shouldn't happen if select_features was applied correctly, but as a safeguard:
+  missing_cols_in_data <- setdiff(top_features, colnames(predict_data))
+  if(length(missing_cols_in_data) > 0) {
+    warning(paste("Missing columns in data_df for prediction:", paste(missing_cols_in_data, collapse=", ")))
+    # Option: fill with NA or 0, or error out. For now, let predict handle it or error.
+  }
+
+  probs <- predict(model, newdata = predict_data, type = "prob")[, "canceled"] # Assumes 'canceled' is the positive class label
+  preds <- ifelse(probs > threshold, 1, 0)
+  
+  # Ensure truth is numeric 0/1, where 1 is the positive class "canceled"
+  if (is.factor(data_df[[label_col]])) {
+    truth <- as.numeric(data_df[[label_col]] == "canceled") 
+  } else { # Assuming it's already 0/1 numeric
+    truth <- as.numeric(data_df[[label_col]])
+  }
+  
+  acc <- Accuracy(y_pred = preds, y_true = truth)
+  
+  # For Precision, Recall, F1, ensure there are at least two unique values in preds and truth
+  # and that the positive class "1" is present.
+  prec <- NA
+  rec <- NA
+  f1 <- NA
+
+  if (length(unique(preds)) > 1 && length(unique(truth)) > 1 && (1 %in% preds || 1 %in% truth)) {
+    # MLmetrics functions expect factors or numeric. Ensure consistency.
+    # If positive class "1" is not in preds, Precision/Recall/F1 might be 0 or NA depending on the library.
+    # MLmetrics handles this by typically returning 0 if the positive class isn't predicted.
+    # We use positive = "1" for numeric 0/1 data.
+    prec <- tryCatch(Precision(y_pred = factor(preds, levels=c(0,1)), y_true = factor(truth, levels=c(0,1)), positive = "1"), error = function(e) NA)
+    rec <- tryCatch(Recall(y_pred = factor(preds, levels=c(0,1)), y_true = factor(truth, levels=c(0,1)), positive = "1"), error = function(e) NA)
+    f1 <- tryCatch(F1_Score(y_pred = factor(preds, levels=c(0,1)), y_true = factor(truth, levels=c(0,1)), positive = "1"), error = function(e) NA)
+  } else if (sum(truth == 1) == 0 && sum(preds == 1) == 0) { # No positive instances in true or pred
+      prec <- 1 # Or NA, depending on definition
+      rec <- 1 # Or NA
+      f1 <- 1 # Or NA
+  } else if (sum(truth == 1) > 0 && sum(preds == 1) == 0) { # Positives in true, none in pred
+      prec <- 0
+      rec <- 0
+      f1 <- 0
+  }
+
+  auc_val <- NA
+  if (length(unique(truth)) > 1) { # Need at least two classes in truth for ROC
+    # Ensure probs and truth are of the same length and no NAs that would cause issues
+    valid_indices <- !is.na(probs) & !is.na(truth)
+    if(sum(valid_indices) > 0 && length(unique(truth[valid_indices])) > 1) {
+        roc_obj <- pROC::roc(response = truth[valid_indices], predictor = probs[valid_indices], quiet = TRUE, levels=c(0,1), direction="<")
+        auc_val <- auc(roc_obj)
+    }
+  }
+
+  return(data.frame(
+    Accuracy = acc,
+    Precision = prec,
+    Recall = rec,
+    F1_Score = f1,
+    AUC = auc_val
+  ))
+}
+```
+
+### City Hotel
+
+For the **City Hotel**, we apply the correct sampling ratios: **SMOTE (1:0.6)** and **DownSampling (1.5:1)** as specified in the methodology.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+df_hotel <- df_city
+df_hotel$arrival_date <- as.Date(df_hotel$arrival_date)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(rsample)
+
+# ==== Step 1: Random Stratified Split for Method II ====
+set.seed(42)
+
+split <- initial_split(df_hotel, prop = 0.75, strata = "is_canceled")
+train_data <- training(split)
+test_data <- testing(split)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# ==== Step 2: Remove Unused Columns ====
+drop_columns <- c("hotel", "arrival_date", "year_month", "days_in_waiting_list", "arrival_date_year", "assigned_room_type", "booking_changes", "reservation_status", "country", "days_in_waiting_list")
+train_data <- train_data %>% select(-any_of(drop_columns))
+test_data_for_model <- test_data %>% select(-arrival_date)  # test_data 沒 year_month
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# 中位數填補數值型 NA
+num_cols <- sapply(train_data, is.numeric)
+for (col in names(train_data)[num_cols]) {
+  med <- median(train_data[[col]], na.rm = TRUE)
+  train_data[[col]][is.na(train_data[[col]])] <- med
+  test_data_for_model[[col]][is.na(test_data_for_model[[col]])] <- med
+}
+
+# 眾數填補類別型 NA
+cat_cols <- sapply(train_data, is.factor)
+for (col in names(train_data)[cat_cols]) {
+  mode_val <- names(sort(table(train_data[[col]]), decreasing = TRUE))[1]
+  train_data[[col]][is.na(train_data[[col]])] <- mode_val
+  test_data_for_model[[col]][is.na(test_data_for_model[[col]])] <- mode_val
+}
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# ==== Step 3: Target Label Formatting ====
+train_data$is_canceled <- factor(train_data$is_canceled, levels = c(0, 1), labels = c("not_canceled", "canceled"))
+test_data_for_model$is_canceled <- factor(test_data_for_model$is_canceled, levels = c(0, 1), labels = c("not_canceled", "canceled"))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# ==== Step 4: Feature Selection (Information Gain) ====
+train_complete <- train_data[complete.cases(train_data), ]
+
+if (nrow(train_complete) < 2 || length(unique(train_complete$is_canceled)) < 2) {
+  message("Skipping varImp: insufficient training data or class imbalance.")
+  top_features <- setdiff(names(train_complete), "is_canceled")
+} else {
+  capture.output({
+    model_caret <- train(
+      is_canceled ~ ., data = train_complete,
+      method = "xgbTree",
+      trControl = trainControl(method = "cv", number = 3, classProbs = TRUE),
+      tuneGrid = expand.grid(
+        nrounds = 50, max_depth = 3, eta = 0.1, gamma = 0,
+        colsample_bytree = 0.8, min_child_weight = 1, subsample = 0.5
+      )
+    )
+  }, file = nullfile())
+  importance <- varImp(model_caret)$importance
+  top_features <- rownames(importance)[order(importance$Overall, decreasing = TRUE)][1:min(10, nrow(importance))]
+}
+top_features <- intersect(top_features, colnames(train_data))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# ==== Step 5: Select Features ====
+select_features <- function(df) df[, c(top_features, "is_canceled")]
+train_selected <- select_features(train_data)
+test_selected <- select_features(test_data_for_model)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# # ==== Step 8: Train Models (Using caret with tuning) ====
+# 
+# train_model_with_caret <- function(train_df, label_name, top_features,
+#                                    sampling_method = c("none", "smote", "down"),
+#                                    seed = 42) {
+#   set.seed(seed)
+#   
+#   # 若是 numeric 才轉換為 factor
+#   if (is.numeric(train_df[[label_name]])) {
+#     train_df[[label_name]] <- factor(train_df[[label_name]], levels = c(0, 1), labels = c("not_canceled", "canceled"))
+#   } else if (is.character(train_df[[label_name]])) {
+#     train_df[[label_name]] <- factor(train_df[[label_name]], levels = c("not_canceled", "canceled"))
+#   }
+# 
+#   model_data <- train_df[, c(intersect(colnames(train_df), top_features), label_name), drop = FALSE]
+# 
+#   # tune_grid <- expand.grid(
+#   #   nrounds = c(50, 100),
+#   #   max_depth = c(3, 5, 7),
+#   #   eta = c(0.01, 0.05, 0.1),
+#   #   gamma = c(0, 1),
+#   #   colsample_bytree = c(0.6, 0.8),
+#   #   min_child_weight = c(1, 3),
+#   #   subsample = c(0.7, 1)
+#   # )
+#   tune_grid <- expand.grid(
+#     nrounds = c(50, 100),
+#     max_depth = c(4, 6),
+#     eta = c(0.05, 0.1),
+#     gamma = 0,
+#     colsample_bytree = 0.8,
+#     min_child_weight = 1,
+#     subsample = 1
+#   )
+#   
+#     # 建立 trainControl
+#   ctrl <- caret::trainControl(
+#     method = "cv",
+#     number = 3,
+#     sampling = match.arg(sampling_method),
+#     classProbs = TRUE,
+#     summaryFunction = twoClassSummary,
+#     verboseIter = TRUE
+#   )
+# 
+#   # 訓練模型
+#   model <- caret::train(
+#     form = as.formula(paste(label_name, "~ .")),
+#     data = na.omit(model_data),
+#     method = "xgbTree",
+#     trControl = ctrl,
+#     tuneGrid = tune_grid,
+#     metric = "ROC",
+#     nthread = 1
+#   )
+# 
+#   return(model)
+# }
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+train_model_with_caret <- function(train_df, label_name, top_features,
+                                   sampling_method = c("none", "smote", "down"),
+                                   seed = 42) {
+  library(caret)
+  library(pROC)
+
+  set.seed(seed)
+
+  # Label 編碼
+  if (is.numeric(train_df[[label_name]])) {
+    train_df[[label_name]] <- factor(train_df[[label_name]], levels = c(0, 1), labels = c("not_canceled", "canceled"))
+  } else if (is.character(train_df[[label_name]])) {
+    train_df[[label_name]] <- factor(train_df[[label_name]], levels = c("not_canceled", "canceled"))
+  }
+
+  model_data <- train_df[, c(intersect(colnames(train_df), top_features), label_name), drop = FALSE]
+
+  # 調參 grid
+  tune_grid <- expand.grid(
+    nrounds = c(50, 100),
+    max_depth = c(4, 6),
+    eta = c(0.05, 0.1),
+    gamma = 0,
+    colsample_bytree = 0.8,
+    min_child_weight = 1,
+    subsample = 1
+  )
+
+  # caret 控制設定
+  ctrl <- trainControl(
+    method = "cv",
+    number = 3,
+    sampling = match.arg(sampling_method),
+    classProbs = TRUE,
+    savePredictions = "final",
+    summaryFunction = twoClassSummary,
+    verboseIter = FALSE
+  )
+
+  # 模型訓練
+  model <- caret::train(
+    form = as.formula(paste(label_name, "~ .")),
+    data = na.omit(model_data),
+    method = "xgbTree",
+    trControl = ctrl,
+    tuneGrid = tune_grid,
+    metric = "ROC",
+    nthread = 1
+  )
+
+  # 預測資料
+  # pred <- model$pred
+  # pred <- pred[pred$alpha == model$bestTune$eta & 
+  #              pred$nrounds == model$bestTune$nrounds & 
+  #              pred$max_depth == model$bestTune$max_depth, ]
+  
+  # 抓出所有要比對的 tuning 參數欄位（動態來自 model$bestTune）
+  bestTune <- model$bestTune
+  pred <- model$pred
+  
+  # 動態過濾：逐欄比對 bestTune 中的每個參數
+  for (param in names(bestTune)) {
+    pred <- pred[pred[[param]] == bestTune[[param]], ]
+  }
+
+
+  # 真實值 / 預測機率 / 預測標籤
+  truth <- pred$obs
+  probs <- pred$canceled
+  predicted <- pred$pred
+
+  # 混淆矩陣 + 指標
+  conf <- confusionMatrix(predicted, truth, positive = "canceled")
+
+  cv_performance <- data.frame(
+    Accuracy = conf$overall["Accuracy"],
+    AUC = pROC::auc(truth, probs),
+    Precision = conf$byClass["Precision"],
+    Recall = conf$byClass["Recall"],
+    F1_Score = conf$byClass["F1"],
+    stringsAsFactors = FALSE
+  )
+
+  # 返回物件，仿 catboost 結構
+  result <- list(
+    finalModel = model,
+    cv_performance = cv_performance,
+    tune_result = model$results,
+    bestTune = model$bestTune,
+    method = "xgboost",
+    sampling_method = sampling_method,
+    features = top_features
+  )
+  class(result) <- c("xgboost_cv", "list")
+  return(result)
+}
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# model_smote <- train_model_with_caret(train_data, "is_canceled", top_features, sampling_method = "smote")
+# model_downsample  <- train_model_with_caret(train_data, "is_canceled", top_features, sampling_method = "down")
+
+# perf_smote <- getTrainPerf(model_smote)
+# perf_down <- getTrainPerf(model_downsample)
+
+result_model_smote <- train_model_with_caret(train_data, "is_canceled", top_features, sampling_method = "smote")
+model_smote <- result_model_smote$finalModel
+
+result_model_downsample <- train_model_with_caret(train_data, "is_canceled", top_features, sampling_method = "down")
+model_downsample <- result_model_downsample$finalModel
+
+perf_smote <- result_model_smote$cv_performance
+perf_down <- result_model_smote$cv_performance
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# ==== Step 9a: Evaluate caret model with custom metrics ====
+optimal_threshold <- 0.5
+
+# SMOTE 模型
+if (!is.null(model_smote)) {
+  test_results_smote <- evaluate_caret_model(model_smote, test_selected, top_features, threshold = optimal_threshold)
+} else {
+  test_results_smote <- data.frame(Accuracy = NA, Precision = NA, Recall = NA, F1_Score = NA, AUC = NA)
+}
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+optimal_threshold <- 0.4
+
+# DownSample 模型
+if (!is.null(model_downsample)) {
+  test_results_downsample <- evaluate_caret_model(model_downsample, test_selected, top_features, threshold = optimal_threshold)
+} else {
+  test_results_downsample <- data.frame(Accuracy = NA, Precision = NA, Recall = NA, F1_Score = NA, AUC = NA)
+}
+```
+
+```{r}
+# ==== Step 10: Compile Results Table ====
+
+city_results <- data.frame(
+  Hotel = "City Hotel",
+  Method = rep(c("SMOTE", "DownSample"), each = 2),
+  Dataset = rep(c("Validation", "Test"), 2),
+
+  Accuracy = c(
+    result_model_smote$cv_performance$Accuracy,
+    test_results_smote$Accuracy,
+    result_model_downsample$cv_performance$Accuracy,
+    test_results_downsample$Accuracy
+  ),
+  
+  Precision = c(
+    result_model_smote$cv_performance$Precision,
+    test_results_smote$Precision,
+    result_model_downsample$cv_performance$Precision,
+    test_results_downsample$Precision
+  ),
+  
+  Recall = c(
+    result_model_smote$cv_performance$Recall,
+    test_results_smote$Recall,
+    result_model_downsample$cv_performance$Recall,
+    test_results_downsample$Recall
+  ),
+  
+  F1_Score = c(
+    result_model_smote$cv_performance$F1_Score,
+    test_results_smote$F1_Score,
+    result_model_downsample$cv_performance$F1_Score,
+    test_results_downsample$F1_Score
+  ),
+  
+  AUC = c(
+    result_model_smote$cv_performance$AUC,
+    test_results_smote$AUC,
+    result_model_downsample$cv_performance$AUC,
+    test_results_downsample$AUC
+  )
+)
+
+write.csv(city_results, "result_city_xgb_m2.csv", row.names = FALSE)
+
+# 顯示表格
+kable(city_results, 
+      caption = "City Hotel Performance Comparison: Validation vs Test Sets",
+      digits = 4)
+```
+
+```{r fig-pred-prob-dist, fig.cap="Prediction Probability Distribution for Canceled vs Not Canceled", warning=FALSE, message=FALSE}
+library(ggplot2)
+
+# 選擇一個模型與測試資料（可改為 validation_selected）
+chosen_model <- model_smote
+chosen_data <- test_selected
+
+# 確保是 factor，並抓出 "canceled" 預測機率
+chosen_probs <- predict(chosen_model, newdata = chosen_data[, top_features, drop=FALSE], type = "prob")[, "canceled"]
+truth_labels <- if (is.factor(chosen_data$is_canceled)) as.character(chosen_data$is_canceled) else as.character(factor(chosen_data$is_canceled, labels = c("not_canceled", "canceled")))
+
+# 建圖資料
+plot_df <- data.frame(prob = chosen_probs, truth = truth_labels)
+
+# 畫圖
+ggplot(plot_df, aes(x = prob, fill = truth)) +
+  geom_histogram(position = "identity", bins = 40, alpha = 0.6) +
+  scale_fill_manual(values = c("not_canceled" = "#1f77b4", "canceled" = "#ff7f0e")) +
+  labs(title = "Prediction Probability Distribution",
+       x = "Predicted Probability for 'Canceled'",
+       y = "Count",
+       fill = "True Label") +
+  theme_minimal()
+
+```
+

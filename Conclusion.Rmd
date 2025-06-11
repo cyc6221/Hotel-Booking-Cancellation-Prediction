@@ -1,0 +1,65 @@
+<!-- Chap 6. -->
+
+<!-- Conclusion and Future Directions -->
+
+## Summary of Findings
+
+This study demonstrates that meaningful predictive performance can be achieved using historical hotel booking data. Despite the data being limited to July 2017, the models successfully identified key features associated with cancellations. The proposed techniques—including SMOTE for resampling, SHAP for feature selection, and CatBoost/XGBoost for modeling—consistently outperformed baseline models, particularly in detecting high-risk cancellations.
+
+---
+
+### Model Comparison Summary: XGBoost vs. CatBoost
+
+In comparing the performance of XGBoost and CatBoost (both integrated with SHAP feature selection), distinct strengths were observed across different evaluation metrics. **XGBoost consistently achieved higher recall and AUC**, especially in both resort and city hotel datasets, making it more effective for identifying high-risk cancellations. In contrast, **CatBoost demonstrated slightly better overall accuracy in the resort setting**, and offered a more balanced trade-off between precision and recall.
+
+Ultimately, the **choice between models should depend on business priorities**:
+
+* If the goal is to **maximize recall** and reduce missed cancellations, **XGBoost** is preferable.
+* If the focus is on **overall predictive balance** or precision, **CatBoost** may be more appropriate.
+
+This insight enables data-driven model selection tailored to specific operational objectives in hotel booking management.
+
+---
+
+### Strategy Comparison: Method I vs. Method II
+
+A comparison between Method I and Method II reveals that **Method II consistently outperforms Method I**, particularly in **recall and AUC** across both resort and city hotel datasets. These improvements underscore Method II’s ability to identify cancellations more effectively, making it better suited for high-sensitivity applications.
+
+While Method I shows slightly higher accuracy in the resort hotel setting, the difference is marginal and does not outweigh the recall advantage offered by Method II. In both hotel types, **Method II demonstrates stronger robustness and generalization**, achieving better balance between sensitivity and predictive power.
+
+**Therefore, Method II is the preferred strategy when the primary objective is to minimize false negatives and enhance cancellation detection performance.**
+
+---
+
+## Limitations of the Current Approach
+
+**Limited Data Coverage**
+The dataset only extends to July 2017, making it unable to capture recent travel trends, post-pandemic behaviors, and evolving customer patterns.
+
+**Challenges in Model Maintenance**
+Updating the model daily requires intensive computation and full data preprocessing, which adds to the maintenance burden and resource demand.
+
+---
+
+## Proposed Modifications
+
+**Use Stratified Random Sampling for Data Splitting**
+
+* Maintains a balanced class distribution (e.g., canceled vs. not canceled) across both training and testing sets.
+* Reduces the complexity of time-based split logic.
+* Enhances the pipeline’s scalability and ease of update with new data.
+
+**Key Benefits**
+
+* Improved class balance consistency across subsets
+* Easier automation and ongoing maintenance
+* Greater model robustness and more reliable evaluation
+
+---
+
+## Future Work
+
+* Extend the dataset to include post-2017 records, especially covering the COVID-19 impact period
+* Experiment with advanced models such as LSTM or Transformer architectures for time-aware predictions
+* Integrate real-time data streams and develop dashboards for operational use
+* Deploy models in production environments and conduct A/B testing to assess business impact

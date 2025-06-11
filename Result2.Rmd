@@ -11,7 +11,9 @@ library(knitr)
 
 <!-- 5.2 XGBoost -->
 
-## Using Method I with XGBoost Classifier
+## XGBoost
+
+### Using Method I with XGBoost Classifier
 
 
 <!-- ```{r child="Result_Resort_XGB_m1_SHAP.Rmd"} -->
@@ -21,7 +23,7 @@ library(knitr)
 <!-- ``` -->
 
 
-### Combined Results Summary
+<!-- ### Combined Results Summary -->
 
 ```{r message=FALSE, echo=FALSE}
 resort_results <- read.csv("result_resort_xgb_m1.csv")
@@ -49,11 +51,11 @@ kable(gap_analysis,
 ```
 
 
-### Validation vs. Test Performance Gap
+<!-- ### Validation vs. Test Performance Gap -->
 
 ---
 
-## Using Method I with XGBoost Classifier with SHAP
+### Using Method I with XGBoost Classifier with SHAP
 
 <!-- ```{r child="Result_Resort_XGB_m1.Rmd"} -->
 <!-- ``` -->
@@ -61,7 +63,7 @@ kable(gap_analysis,
 <!-- ```{r child="Result_City_XGB_m1.Rmd"} -->
 <!-- ``` -->
 
-### Combined Results Summary
+<!-- ### Combined Results Summary -->
 
 ```{r message=FALSE, echo=FALSE}
 resort_results <- read.csv("result_resort_xgb_m1_SHAP.csv")
@@ -88,11 +90,11 @@ kable(gap_analysis,
 
 ```
 
-### Validation vs. Test Performance Gap
+<!-- ### Validation vs. Test Performance Gap -->
 
 ---
 
-## Using Method II with XGBoost Classifier
+### Using Method II with XGBoost Classifier
 
 <!-- ```{r child="Result_Resort_XGB_m2.Rmd"} -->
 <!-- ``` -->
@@ -101,7 +103,7 @@ kable(gap_analysis,
 <!-- ``` -->
 
 
-### Combined Results Summary
+<!-- ### Combined Results Summary -->
 
 ```{r message=FALSE, echo=FALSE}
 resort_results <- read.csv("result_resort_xgb_m2.csv")
@@ -129,11 +131,11 @@ kable(gap_analysis,
 ```
 
 
-### Validation vs. Test Performance Gap
+<!-- ### Validation vs. Test Performance Gap -->
 
 ---
 
-## Using Method II with XGBoost Classifier with SHAP
+### Using Method II with XGBoost Classifier with SHAP
 
 <!-- ```{r child="Result_Resort_XGB_m2_SHAP.Rmd"} -->
 <!-- ``` -->
@@ -142,7 +144,7 @@ kable(gap_analysis,
 <!-- ``` -->
 
 
-### Combined Results Summary
+<!-- ### Combined Results Summary -->
 
 ```{r message=FALSE, echo=FALSE}
 resort_results <- read.csv("result_resort_xgb_m2_SHAP.csv")
@@ -170,4 +172,24 @@ kable(gap_analysis,
 ```
 
 
-### Validation vs. Test Performance Gap
+<!-- ### Validation vs. Test Performance Gap -->
+
+---
+
+### XGBoost + SHAP Summary of Findings
+
+The XGBoost model with SHAP-based feature selection demonstrates clear improvements over the reference model:
+
+* **Recall increased significantly** in both resort and city hotels, especially under DownSampling.
+
+  * *Resort*: From **0.603** to **0.8835**
+  * *City*: From **0.779** to **0.7936**
+
+* **AUC scores also improved or remained competitive**, indicating strong overall classification performance.
+
+  * *Resort*: Up from **0.877** to **0.8842**
+  * *City*: Slight drop from **0.922** to **0.8879**, but still robust
+
+* **Accuracy decreased slightly**, particularly for the DownSampling method, but this trade-off is acceptable given the significant gains in recall and sensitivity.
+
+* Compared to the baseline model, the proposed approach exhibits **superior sensitivity** in identifying cancellations, making it more suitable for applications where minimizing false negatives is critical.

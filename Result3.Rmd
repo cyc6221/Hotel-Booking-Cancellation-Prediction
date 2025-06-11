@@ -11,7 +11,9 @@ library(knitr)
 
 <!-- 5.3 CatBoost -->
 
-## Using Method I with CatBoost Classifier
+## CatBoost
+
+### Using Method I with CatBoost Classifier
 
 
 <!-- ```{r child="Result_Resort_CAT_m1.Rmd"} -->
@@ -21,7 +23,7 @@ library(knitr)
 <!-- ``` -->
 
 
-### Combined Results Summary
+<!-- ### Combined Results Summary -->
 
 ```{r message=FALSE, echo=FALSE}
 resort_results <- read.csv("result_resort_CAT_m1.csv")
@@ -49,11 +51,11 @@ kable(gap_analysis,
 ```
 
 
-### Validation vs. Test Performance Gap
+<!-- ### Validation vs. Test Performance Gap -->
 
 ---
 
-## Using Method I with CAToost Classifier with SHAP 
+### Using Method I with CAToost Classifier with SHAP 
 
 <!-- ```{r child="Result_Resort_CAT_m1_SHAP.Rmd"} -->
 <!-- ``` -->
@@ -61,7 +63,7 @@ kable(gap_analysis,
 <!-- ```{r child="Result_City_CAT_m1_SHAP.Rmd"} -->
 <!-- ``` -->
 
-### Combined Results Summary
+<!-- ### Combined Results Summary -->
 
 ```{r message=FALSE, echo=FALSE}
 resort_results <- read.csv("result_resort_CAT_m1_SHAP.csv")
@@ -88,11 +90,11 @@ kable(gap_analysis,
 
 ```
 
-### Validation vs. Test Performance Gap
+<!-- ### Validation vs. Test Performance Gap -->
 
 ---
 
-## Using Method II with CAToost Classifier
+### Using Method II with CAToost Classifier
 
 <!-- ```{r child="Result_Resort_CAT_m2.Rmd"} -->
 <!-- ``` -->
@@ -101,7 +103,7 @@ kable(gap_analysis,
 <!-- ``` -->
 
 
-### Combined Results Summary
+<!-- ### Combined Results Summary -->
 
 ```{r message=FALSE, echo=FALSE}
 resort_results <- read.csv("result_resort_CAT_m2.csv")
@@ -129,11 +131,11 @@ kable(gap_analysis,
 ```
 
 
-### Validation vs. Test Performance Gap
+<!-- ### Validation vs. Test Performance Gap -->
 
 ---
 
-## Using Method II with CAToost Classifier with SHAP
+### Using Method II with CAToost Classifier with SHAP
 
 <!-- ```{r child="Result_Resort_CAT_m2_SHAP.Rmd"} -->
 <!-- ``` -->
@@ -142,7 +144,7 @@ kable(gap_analysis,
 <!-- ``` -->
 
 
-### Combined Results Summary
+<!-- ### Combined Results Summary -->
 
 ```{r message=FALSE, echo=FALSE}
 resort_results <- read.csv("result_resort_CAT_m2_SHAP.csv")
@@ -170,4 +172,25 @@ kable(gap_analysis,
 ```
 
 
-### Validation vs. Test Performance Gap
+<!-- ### Validation vs. Test Performance Gap -->
+
+---
+
+### CatBoost + SHAP Summary of Findings
+
+The CatBoost model combined with SHAP-based feature selection demonstrates reliable improvements in recall performance, with stable AUC scores across both hotel types:
+
+* **Recall improved significantly** compared to the literature baseline:
+
+  * *Resort*: Recall increased from **0.603** to **0.7670** (SMOTE) and **0.7577** (DownSampling)
+  * *City*: Slight recall drop compared to reference (**0.779** to \~**0.688**), but still within acceptable range
+
+* **AUC values remain high or improved**, ensuring consistent classification quality:
+
+  * *Resort*: AUC up to **0.8788**
+  * *City*: AUC up to **0.8796**, slightly below reference but still robust
+
+* **Accuracy and precision slightly declined**, reflecting a trade-off favoring higher sensitivity. This is particularly beneficial in applications where identifying potential cancellations is more critical than minimizing false positives.
+
+* **Overall**, CatBoost with SHAP offers a **stable and reliable performance**, maintaining effectiveness across both resort and city hotel segments, while improving sensitivity in cancellation prediction.
+

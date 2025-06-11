@@ -11,6 +11,7 @@ output:
     css: style.css
 bibliography: references.bib
 csl: ieee.csl
+url: https://github.com/cyc6221/Hotel-Booking-Cancellation-Prediction
 ---
 
 ```{r setup, include=FALSE}
@@ -23,31 +24,31 @@ library(knitr)
 
 <!-- chap 1 -->
 
-<!-- # Problem Statement -->
+# Problem Statement
 
-<!-- ```{r child="ProblemStatement.Rmd"} -->
-<!-- ``` -->
+```{r child="ProblemStatement.Rmd"}
+```
 
 <!-- chap 2 -->
 
-<!-- # Dataset Description, Data Preprocessing, and Visualization -->
+# Dataset Description and Data Preprocessing
 
-<!-- ```{r child="Dataset.Rmd"} -->
-<!-- ``` -->
+```{r child="Dataset.Rmd"}
+```
 
 <!-- chap 3 -->
 
-<!-- # Exploratory Visualization -->
+# Exploratory Data Analysis
 
-<!-- ```{r child="Visualization.Rmd"} -->
-<!-- ``` -->
+```{r child="Visualization.Rmd"}
+```
 
 <!-- chap 4 -->
 
-<!-- # Analysis Process Designed for the Problem -->
+# Analysis Process Designed for the Problem
 
-<!-- ```{r child="ProcessDesign.Rmd"} -->
-<!-- ``` -->
+```{r child="ProcessDesign.Rmd"}
+```
 
 <!-- chap 5 -->
 
@@ -61,3 +62,26 @@ library(knitr)
 
 ```{r child="Result3.Rmd"}
 ```
+
+<!-- chap 6 -->
+
+# Conclusion and Future Directions
+
+```{r child="Conclusion.Rmd"}
+```
+
+<!-- chap 7 -->
+
+# References
+
+::: {#refs}
+:::
+
+---
+
+# Appendix
+
+## Project Repository  
+
+Source code and materials:  
+[https://github.com/cyc6221/Hotel-Booking-Cancellation-Prediction](https://github.com/cyc6221/Hotel-Booking-Cancellation-Prediction)

@@ -1,10 +1,23 @@
 # temp
 all_results.csv
 gap_analysis.csv
+test.pdf
+catboost_training.json
+learn_error.tsv
+time_left.tsv
+events.out.tfevents
+MathJax.js.下載
+fig-pred-prob-dist-1.png
 
 # old
 Final.pdf
 Final.Rmd
+313554049.Rproj
+
+# Presentation
+FinalPresentationScore.txt
+313554049.pptx
+src.zip
 
 ---
 

@@ -129,21 +129,149 @@ This plot compares the average number of guests per month between the two hotel 
 # Extract numeric month from arrival_date (as integer 1~12)
 df$month_num <- as.integer(format(df$arrival_date, "%m"))
 
-# Compute total guests and monthly average per hotel type
+# Compute total guests and monthly total per hotel type
 monthly_guests <- df %>%
   mutate(total_guests = adults + children + babies) %>%
   group_by(month_num, hotel) %>%
-  summarise(avg_guests = mean(total_guests, na.rm = TRUE), .groups = "drop") %>%
+  summarise(total_guests = sum(total_guests, na.rm = TRUE), .groups = "drop") %>%
   ungroup() %>%
   mutate(hotel = ifelse(hotel == 0, "Resort Hotel", "City Hotel"))
 
-# Plot the monthly average guest count by hotel type (X axis as numeric month)
-ggplot(monthly_guests, aes(x = month_num, y = avg_guests, color = hotel, group = hotel)) +
+# Plot the monthly total guest count by hotel type
+ggplot(monthly_guests, aes(x = month_num, y = total_guests, color = hotel, group = hotel)) +
   geom_line(size = 1) +
   geom_point(size = 2) +
-  labs(title = "Average Number of Hotel Guests per Month",
+  labs(title = "Total Number of Hotel Guests per Month",
        x = "Month (Numeric)",
        y = "Number of Guests") +
   scale_x_continuous(breaks = 1:12) +
   theme_minimal()
+```
+
+Table 1 summarizes the total number of guests (including adults, children, and babies) for each month across the two hotel types. This numeric breakdown provides additional insight into the seasonal guest volume trends observed in Figure 6.
+
+```{r}
+# Create a summary table of total guests by month and hotel type
+monthly_table <- monthly_guests %>%
+  tidyr::pivot_wider(names_from = hotel, values_from = total_guests) %>%
+  arrange(month_num)
+
+# Display the table with caption
+knitr::kable(monthly_table, caption = "Monthly Total Number of Guests by Hotel Type")
+
+```
+
+---
+
+## Monthly Variation in Booking Cancellation Rate
+
+This section analyzes how the hotel booking cancellation rate varies across different months. The line chart below visualizes the average cancellation rate for each month, helping to identify seasonal patterns in booking behavior.
+
+```{r}
+df %>%
+  mutate(month_num = as.integer(format(arrival_date, "%m"))) %>%
+  group_by(month_num) %>%
+  summarise(cancellation_rate = mean(is_canceled)) %>%
+  ggplot(aes(x = month_num, y = cancellation_rate)) +
+  geom_line() +
+  scale_x_continuous(breaks = 1:12) +
+  labs(title = "Monthly Cancellation Rate", x = "Month", y = "Cancellation Rate")
+```
+
+The following table lists the monthly cancellation rates with three decimal places, offering a precise comparison of cancellation behaviors across the year.
+
+```{r}
+# Compute monthly cancellation rate
+monthly_cancellation <- df %>%
+  mutate(month_num = as.integer(format(arrival_date, "%m"))) %>%
+  group_by(month_num) %>%
+  summarise(cancellation_rate = mean(is_canceled), .groups = "drop") %>%
+  arrange(month_num)
+
+# Display the summary table
+knitr::kable(monthly_cancellation, digits = 3, caption = "Monthly Booking Cancellation Rate")
+```
+
+---
+
+##Correlation Heatmap of Selected Numeric Features
+
+This plot visualizes the Pearson correlation coefficients among selected numeric features, helping to identify potential relationships and multicollinearity between variables.
+
+```{r correlation-heatmap, fig.width=10, fig.height=8}
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+
+# Manually select numeric columns for correlation analysis
+cols_to_include <- c(
+  "is_canceled",
+  "lead_time",
+  "total_of_special_requests",
+  "required_car_parking_spaces",
+  # "booking_changes",
+  "previous_cancellations",
+  "is_repeated_guest",
+  # "company",
+  "adults",
+  "previous_bookings_not_canceled",
+  "days_in_waiting_list",
+  # "agent",
+  "adr",
+  "babies",
+  "stays_in_week_nights",
+  "arrival_date_year",
+  "arrival_date_week_number",
+  "arrival_date_day_of_month",
+  "children",
+  "stays_in_weekend_nights"
+)
+
+# Filter and remove rows with NA values
+numeric_df <- df %>%
+  select(all_of(cols_to_include)) %>%
+  na.omit()
+
+# Compute correlation matrix and reshape for ggplot2
+cor_matrix <- cor(numeric_df)
+cor_long <- melt(cor_matrix)
+
+# Create heatmap
+ggplot(cor_long, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",
+                       midpoint = 0, limit = c(-1, 1), space = "Lab",
+                       name = "Pearson\nCorrelation") +
+  geom_text(aes(label = round(value, 2)), size = 3) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        plot.title = element_text(hjust = 0.5)) +
+  coord_fixed() +
+  labs(title = "Correlation Heatmap (Selected Columns)",
+       x = "", y = "")
+```
+
+---
+
+## Top 5 Features Most Correlated with Cancellation
+
+To better understand which features influence booking cancellations, we extract the top five variables most correlated with the is_canceled label.
+
+```{r}
+# Compute correlation matrix
+numeric_df <- df %>% select(all_of(cols_to_include)) %>% na.omit()
+cor_matrix <- cor(numeric_df)
+
+# Extract correlation with the target variable "is_canceled" (excluding itself)
+cor_target <- cor_matrix["is_canceled", ]
+cor_target <- cor_target[names(cor_target) != "is_canceled"]
+
+# Sort by absolute value of correlation
+top_5 <- sort(abs(cor_target), decreasing = TRUE)[1:5]
+
+# Retrieve original signed correlation coefficients
+top_5_named <- cor_target[names(top_5)]
+
+# Print top 5 correlated features
+print(round(top_5_named, 3))
 ```
